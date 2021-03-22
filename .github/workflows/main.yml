@@ -34,3 +34,5 @@ jobs:
       - uses: actions/checkout@v2
       - name: molecule
         uses: robertdebock/molecule-action@2.6.8
+        env:
+          MOLECULE_DISTRO: ${{ matrix.distro }}
