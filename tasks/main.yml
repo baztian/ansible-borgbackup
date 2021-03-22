@@ -29,15 +29,19 @@
       url: "https://github.com/borgbackup/borg/releases/download/{{ borgbackup_static_binary_version }}/borg-linux64"
       checksum: "sha256:{{ borgbackup_static_binary_sha256 }}"
       dest: "/opt/borgbackup-{{ borgbackup_static_binary_version }}/borg"
+      mode: '0755'
     when: not borgbackup_directory.stat.exists
   - name: Symlink default borgbackup
     file:
-      src: "borg-{{ borgbackup_static_binary_version }}"
+      src: "borgbackup-{{ borgbackup_static_binary_version }}"
       dest: "/opt/borgbackup"
       state: link
   - name: Symlink borgbackup bin
     file:
-      src: "/opt/borgbackup/borg-linux64"
-      dest: "/usr/local/bin/borg"
+      src: "/opt/borgbackup/borg"
+      dest: "/usr/local/bin/{{ item }}"
       state: link
+    with_items:
+      - borg
+      - borgbackup
   tags: borgbackup
