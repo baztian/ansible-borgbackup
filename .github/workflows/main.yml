@@ -27,6 +27,7 @@ jobs:
         distro:
           - ubuntu2004
           - ubuntu1804
+          - ubuntu1604
           - debian10
           - debian9
     steps:
