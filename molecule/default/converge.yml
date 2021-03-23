@@ -7,3 +7,32 @@
     - name: Include this role
       include_role:
         name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        borgmatic_configs:
+          backup-etc:
+            location:
+              source_directories:
+                - /etc
+              repositories:
+                - /srv/backup_etc
+              atime: false
+              exclude_patterns:
+                - icon_cache
+            retention:
+              keep_daily: 7
+              keep_weekly: 4
+              keep_monthly: 12
+
+          backup-home:
+            location:
+              source_directories:
+                - /home
+              repositories:
+                - /srv/backup_home
+              atime: false
+              exclude_patterns:
+                - icon_cache
+            retention:
+              keep_daily: 7
+              keep_weekly: 4
+              keep_monthly: 12

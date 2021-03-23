@@ -18,3 +18,12 @@
     assert:
       that:
         - "{{ borgbmatic_version_cmd.stdout is version('1.5.0', '>=') }}"
+  - name: register borgmatic list
+    command: borgmatic list
+    register: borgmatic_list_cmd
+    become: yes
+  - name: borgbackup list should contain both repos
+    assert:
+      that:
+        - "{{ borgmatic_list_cmd.stdout is search('/srv/backup_etc: Listing archives') }}"
+        - "{{ borgmatic_list_cmd.stdout is search('/srv/backup_home: Listing archives') }}"
