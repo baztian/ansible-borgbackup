@@ -3,6 +3,7 @@
   template:
     src: "{{ item }}"
     dest: /etc/systemd/system/borgmatic.service
+    mode: '0644'
   with_first_found:
     - "borgmatic-{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.service.j2"
     - "borgmatic-{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.service.j2"
@@ -11,6 +12,7 @@
   template:
     src: borgmatic.timer.j2
     dest: /etc/systemd/system/borgmatic.timer
+    mode: '0644'
 - name: Make sure borgmatic timer is running
   systemd:
     name: borgmatic.timer
