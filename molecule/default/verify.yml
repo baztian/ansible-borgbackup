@@ -30,6 +30,7 @@
   - name: Populate service facts
     service_facts:
     become: yes
+    # Only works for ansible > 2.9.8. See https://github.com/ansible/ansible/pull/20177
     when: ansible_version.full is version('2.9.8', '>=')
   - name: Borgmatic service should be running
     assert:
