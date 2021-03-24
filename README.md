@@ -23,7 +23,9 @@ that role first.
 * `borgmatic_init_encryption`: The
   [encryption algorithm](https://torsion.org/borgmatic/docs/how-to/set-up-backups/#initialization) to use.
   By default it is set no `none`.
-* `borgmatic_timer`: The `borgmatic.timer`'s `OnCalendar` value.
+* `borgmatic_timer`: The `borgmatic.timer`'s `OnCalendar` value. See
+  [systemd documentation](https://www.freedesktop.org/software/systemd/man/systemd.time.html#Calendar%20Events)
+  for valid values.
 * `borgmatic_configs`: A dict with the contents of borgmatic per application configuration file. This is copied
   verbatim to the borgmatic config folder. This role is set for
   [per-application setup](https://torsion.org/borgmatic/docs/how-to/make-per-application-backups/). See the
