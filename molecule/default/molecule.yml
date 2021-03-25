@@ -11,6 +11,11 @@ driver:
 platforms:
   - name: instance
     image: "docker-${MOLECULE_DISTRO:-ubuntu2004}-ansible:latest"
+    # Not sure why empty command. Maybe to make sure systemd is PID 1?
+    command: ""
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    privileged: True
 provisioner:
   name: ansible
   log: True

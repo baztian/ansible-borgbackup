@@ -4,3 +4,4 @@
 - import_tasks: borg-install.yml
 - import_tasks: borgmatic-install.yml
 - import_tasks: borgmatic-config.yml
+- import_tasks: borgmatic-job.yml
