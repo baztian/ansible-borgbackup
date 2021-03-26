@@ -6,3 +6,4 @@ borgmatic_unpackaged_version: 1.5.1
 borgmatic_init_encryption: "none"
 borgmatic_configs: {}
 borgmatic_timer: "Weekly"
+borgmatic_init_repos: true

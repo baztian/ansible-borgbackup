@@ -20,6 +20,8 @@ that role first.
 
 ## Role variables
 
+* `borgmatic_init_repos`: Whether to initialize the repos or not. Set to `False` if
+  you want to initialize with `borgmatic init...` yourself.
 * `borgmatic_init_encryption`: The
   [encryption algorithm](https://torsion.org/borgmatic/docs/how-to/set-up-backups/#initialization) to use.
   By default it is set no `none`.
