@@ -1,4 +1,8 @@
 ---
+- name: Find absolute path to systemd-inhibit
+  shell:
+    cmd: which systemd-inhibit
+  register: which_system_inhibit
 - name: install borgmatic systemd unit file
   template:
     src: "{{ item }}"
