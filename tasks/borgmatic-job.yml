@@ -3,6 +3,7 @@
   shell:
     cmd: which systemd-inhibit
   register: which_system_inhibit
+  changed_when: False
 - name: install borgmatic systemd unit file
   template:
     src: "{{ item }}"
