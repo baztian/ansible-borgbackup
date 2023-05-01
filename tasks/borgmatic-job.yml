@@ -4,7 +4,7 @@
     cmd: which systemd-inhibit
   register: which_system_inhibit
   changed_when: False
-- name: install borgmatic systemd unit file
+- name: Install borgmatic systemd unit file
   template:
     src: "{{ item }}"
     dest: /etc/systemd/system/borgmatic.service
@@ -13,7 +13,7 @@
     - "borgmatic-{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.service.j2"
     - "borgmatic-{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.service.j2"
     - "borgmatic.service.j2"
-- name: install borgmatic systemd timer file
+- name: Install borgmatic systemd timer file
   template:
     src: borgmatic.timer.j2
     dest: /etc/systemd/system/borgmatic.timer
