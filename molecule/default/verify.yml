@@ -16,6 +16,7 @@
   - name: Register borgmatic version
     command: borgmatic --version
     register: borgbmatic_version_cmd
+    changed_when: False
   - name: Borgmatic should be at least 1.5.x
     assert:
       that:
