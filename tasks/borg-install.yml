@@ -1,9 +1,9 @@
 ---
 - name: Determine whether borgbackup can be installed as a package
   set_fact:
-    install_borg_as_package: "{{ False if ( ansible_distribution == 'Debian' and ansible_distribution_release == 'stretch'
+    install_borg_as_package: "{{ False if (ansible_distribution == 'Debian' and ansible_distribution_release == 'stretch'
      or ansible_distribution == 'Ubuntu' and ansible_distribution_release == 'xenial'
-     or ansible_distribution == 'Linux Mint' and ansible_distribution_major_version <= '18' ) else True }}"
+     or ansible_distribution == 'Linux Mint' and ansible_distribution_major_version <= '18') else True }}"
   tags: borgbackup
 - name: Install borgbackup package
   when: install_borg_as_package
@@ -13,6 +13,7 @@
   tags: borgbackup
 - name: Install borgbackup static binary
   when: not install_borg_as_package
+  tags: borgbackup
   block:
   - name: Check if borgbackup already installed
     stat:
@@ -22,7 +23,7 @@
     file:
       path: "/opt/borgbackup-{{ borgbackup_unpackaged_version }}"
       state: directory
-      mode: 0775
+      mode: 0755
   - name: Download borgbackup
     get_url:
       url: "https://github.com/borgbackup/borg/releases/download/{{ borgbackup_unpackaged_version }}/borg-linux64"
@@ -43,4 +44,3 @@
     with_items:
       - borg
       - borgbackup
-  tags: borgbackup

@@ -1,11 +1,11 @@
 ---
 - name: Determine whether borgmatic can be installed as a package
   set_fact:
-    install_borgmatic_as_package: "{{ False if ( ansible_distribution == 'Debian' and
-     ( ansible_distribution_release == 'stretch' or ansible_distribution_release == 'buster' )
+    install_borgmatic_as_package: "{{ False if (ansible_distribution == 'Debian' and
+     (ansible_distribution_release == 'stretch' or ansible_distribution_release == 'buster')
      or ansible_distribution == 'Ubuntu' and
-     ( ansible_distribution_release == 'xenial' or ansible_distribution_release == 'bionic' )
-     or ansible_distribution == 'Linux Mint' and ansible_distribution_major_version <= '19' ) else True }}"
+     (ansible_distribution_release == 'xenial' or ansible_distribution_release == 'bionic')
+     or ansible_distribution == 'Linux Mint' and ansible_distribution_major_version <= '19') else True }}"
   tags: borgmatic
 - name: Install borgmatic package
   when: install_borgmatic_as_package

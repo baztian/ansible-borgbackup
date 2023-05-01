@@ -1,7 +1,13 @@
 ---
 - name: Update apt cache.
-  apt: update_cache=yes cache_valid_time=3600
-- import_tasks: borg-install.yml
-- import_tasks: borgmatic-install.yml
-- import_tasks: borgmatic-config.yml
-- import_tasks: borgmatic-job.yml
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+- name: Install borg
+  import_tasks: borg-install.yml
+- name: Install borgmatic
+  import_tasks: borgmatic-install.yml
+- name: Install bogmatic config files
+  import_tasks: borgmatic-config.yml
+- name: Install sysctl jobs
+  import_tasks: borgmatic-job.yml
