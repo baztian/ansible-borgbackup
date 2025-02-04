@@ -11,7 +11,7 @@
     owner: root
     group: root
     mode: '0755'
-- name: install borgmatic systemd unit override file
+- name: Install borgmatic systemd unit override file
   template:
     src: "{{ item }}"
     dest: /etc/systemd/system/borgmatic.service.d/override.conf
@@ -27,7 +27,7 @@
     owner: root
     group: root
     mode: '0755'
-- name: install borgmatic systemd timer override file
+- name: Install borgmatic systemd timer override file
   template:
     src: borgmatic.timer-override.j2
     dest: /etc/systemd/system/borgmatic.timer.d/override.conf
@@ -35,5 +35,6 @@
 - name: Make sure borgmatic timer is running
   systemd:
     name: borgmatic.timer
-    state: started
+    daemon_reload: true
+    state: restarted
     enabled: yes
