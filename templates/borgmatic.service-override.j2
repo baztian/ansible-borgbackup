@@ -2,12 +2,6 @@
 # File managed by Ansible
 # Your changes will be overwritten.
 ########################################################################
+# Work around https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1093271
 [Unit]
-Description=Run borgmatic backup
-
-[Timer]
-OnCalendar={{ borgmatic_timer  }}
-Persistent=true
-
-[Install]
-WantedBy=timers.target
+ConditionFileNotEmpty=

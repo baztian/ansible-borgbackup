@@ -43,32 +43,30 @@ that role first.
       vars:
         borgmatic_configs:
           backup-etc:
-            location:
-              source_directories:
+            source_directories:
                 - /etc
-              repositories:
-                - /srv/backup_etc
-              atime: false
-              exclude_patterns:
-                - icon_cache
-            retention:
-              keep_daily: 7
-              keep_weekly: 4
-              keep_monthly: 12
+            repositories:
+                - path: /srv/backup_etc
+                  label: local
+            atime: false
+            exclude_patterns:
+              - icon_cache
+            keep_daily: 7
+            keep_weekly: 4
+            keep_monthly: 12
 
           backup-home:
-            location:
-              source_directories:
-                - /home
-              repositories:
-                - /srv/backup_home
-              atime: false
-              exclude_patterns:
-                - icon_cache
-            retention:
-              keep_daily: 7
-              keep_weekly: 4
-              keep_monthly: 12
+            source_directories:
+              - /home
+            repositories:
+              - path: /srv/backup_home
+                label: local
+            atime: false
+            exclude_patterns:
+              - icon_cache
+            keep_daily: 7
+            keep_weekly: 4
+            keep_monthly: 12
 
 ## License
 

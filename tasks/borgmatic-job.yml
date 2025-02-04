@@ -4,19 +4,33 @@
     cmd: which systemd-inhibit
   register: which_system_inhibit
   changed_when: False
-- name: Install borgmatic systemd unit file
+- name: Ensure borgmatic service override directory exists
+  file:
+    path: /etc/systemd/system/borgmatic.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+- name: install borgmatic systemd unit override file
   template:
     src: "{{ item }}"
-    dest: /etc/systemd/system/borgmatic.service
+    dest: /etc/systemd/system/borgmatic.service.d/override.conf
     mode: '0644'
   with_first_found:
-    - "borgmatic-{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.service.j2"
-    - "borgmatic-{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.service.j2"
-    - "borgmatic.service.j2"
-- name: Install borgmatic systemd timer file
+    - "borgmatic-{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.service-override.j2"
+    - "borgmatic-{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.service-override.j2"
+    - "borgmatic.service-override.j2"
+- name: Ensure borgmatic timer override directory exists
+  file:
+    path: /etc/systemd/system/borgmatic.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+- name: install borgmatic systemd timer override file
   template:
-    src: borgmatic.timer.j2
-    dest: /etc/systemd/system/borgmatic.timer
+    src: borgmatic.timer-override.j2
+    dest: /etc/systemd/system/borgmatic.timer.d/override.conf
     mode: '0644'
 - name: Make sure borgmatic timer is running
   systemd:
