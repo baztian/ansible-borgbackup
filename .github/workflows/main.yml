@@ -17,7 +17,7 @@ jobs:
       - name: yaml-lint
         uses: ibiqlik/action-yamllint@v3
       - name: Run ansible-lint
-        uses: ansible/ansible-lint-action@main
+        uses: ansible-community/ansible-lint-action@main
   test:
     runs-on: ubuntu-latest
     strategy:
