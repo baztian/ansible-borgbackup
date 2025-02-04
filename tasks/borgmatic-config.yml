@@ -10,7 +10,7 @@
     bormgatic_list_dicts_name_config: |
         {% set res = [] -%}
         {% for key, value in borgmatic_configs.items() -%}
-            {% set ignored = res.append({'name': key, 'config':value}) -%}
+            {% set ignored = res.append({'name': key, 'config': value}) -%}
         {%- endfor %}
         {{ res }}
 - name: Add Borgmatic Configurations
