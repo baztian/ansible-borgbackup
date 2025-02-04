@@ -1,0 +1,6 @@
+---
+- name: Copy the suspend script
+  copy:
+    src: suspend_after_borg.sh
+    dest: /usr/local/bin/suspend_after_borg.sh
+    mode: '0755'

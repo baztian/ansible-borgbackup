@@ -36,5 +36,5 @@
   systemd:
     name: borgmatic.timer
     daemon_reload: true
-    state: restarted
+    state: started
     enabled: yes
