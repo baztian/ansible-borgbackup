@@ -14,10 +14,6 @@ The configuration parts are based on
 The `respositories` parent directory from `borgmatic_configs` (see below) need to exist, or this role
 will fail.
 
-For older distribution releases borgmatic will be installed using
-[baztian.pip_venv](https://galaxy.ansible.com/baztian/pip_venv). Therefore you should consider downloading
-that role first.
-
 ## Role variables
 
 * `borgmatic_init_repos`: Whether to initialize the repos or not. Set to `False` if
