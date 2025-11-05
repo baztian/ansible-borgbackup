@@ -1,6 +1,6 @@
 ---
 - name: Find absolute path to systemd-inhibit
-  shell: # noqa 305 we need shell as this sets up the path's correctly
+  shell: # noqa command-instead-of-shell we need shell as this sets up the path's correctly
     cmd: which systemd-inhibit
   register: which_system_inhibit
   changed_when: False
