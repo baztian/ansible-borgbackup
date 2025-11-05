@@ -7,7 +7,10 @@ galaxy_info:
   platforms:
   - name: Ubuntu
     versions:
-    - noble
+      - jammy
+  - name: Debian
+    versions:
+      - bookworm
   galaxy_tags:
     - backup
     - borgbackup

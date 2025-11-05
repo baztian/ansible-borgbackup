@@ -5,19 +5,11 @@
     state: directory
     mode: 0700
     owner: root
-- name: Transform borgmatic_configs to a list of dicts
-  set_fact:
-    bormgatic_list_dicts_name_config: |
-        {% set res = [] -%}
-        {% for key, value in borgmatic_configs.items() -%}
-            {% set ignored = res.append({'name': key, 'config': value}) -%}
-        {%- endfor %}
-        {{ res }}
 - name: Add Borgmatic Configurations
   template:
     src: borgmatic_app.yml.j2
-    dest: "/etc/borgmatic.d/{{ item.name }}.yml"
+    dest: "/etc/borgmatic.d/{{ item.key }}.yml"
     mode: 0600
-  with_items: "{{ bormgatic_list_dicts_name_config }}"
+  with_items: "{{ borgmatic_configs | dict2items }}"
   notify:
     - Init Borgmatic repos
