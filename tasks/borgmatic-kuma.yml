@@ -40,8 +40,8 @@
   when: _borgmatic_kuma_repositories | length > 0
 
 - name: Install Uptime Kuma push script
-  template:
-    src: borgmatic-kuma-push.j2
+  copy:
+    src: borgmatic-kuma-push
     dest: /usr/local/sbin/borgmatic-kuma-push
     owner: root
     group: root
