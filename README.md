@@ -20,7 +20,7 @@ will fail.
   you want to initialize with `borgmatic init...` yourself.
 * `borgmatic_init_encryption`: The
   [encryption algorithm](https://torsion.org/borgmatic/docs/how-to/set-up-backups/#initialization) to use.
-  By default it is set no `none`.
+  By default it is set to `none`. This selects the encryption mode; it is not the repository passphrase.
 * `borgmatic_timer`: The `borgmatic.timer`'s `OnCalendar` value. See
   [systemd documentation](https://www.freedesktop.org/software/systemd/man/systemd.time.html#Calendar%20Events)
   for valid values.
@@ -29,6 +29,50 @@ will fail.
   [per-application setup](https://torsion.org/borgmatic/docs/how-to/make-per-application-backups/). See the
   [borgmatic reference documentation](https://torsion.org/borgmatic/docs/reference/configuration/) for a
   complete list of available configuration.
+* `borgmatic_kuma`: Optional Uptime Kuma settings. When at least one repository token is non-empty, the role
+  installs a protected environment file and adds success and error hooks to each borgmatic configuration.
+  Repository keys must use uppercase letters, digits, and underscores. Matchers support Bash glob patterns.
+  Store tokens with Ansible Vault.
+
+Example:
+
+```yaml
+borgmatic_kuma:
+  url: "http://192.168.178.224:3001"
+  repositories:
+    HOME_LOCAL:
+      matcher: "/srv/backups/home.borg"
+      token: "{{ kuma_token_home_local }}"
+    HOME_NAS:
+      matcher: "ssh://mybackup@nas*home.borg"
+      token: "{{ kuma_token_home_nas }}"
+```
+
+The role writes `/etc/borgmatic.d/kuma.env` with mode `0600` and installs
+`/usr/local/sbin/borgmatic-kuma-push` with mode `0750`. Empty or omitted tokens disable their matchers.
+
+## Protecting secrets with Ansible Vault
+
+Keep Borg repository passphrases and Kuma tokens in an Ansible Vault-encrypted variables file. Reference
+the passphrase from `borgmatic_configs`:
+
+```yaml
+borgmatic_configs:
+  backup-home:
+    storage:
+      encryption_passphrase: "{{ vault_borgmatic_passphrase }}"
+```
+
+For example, define `vault_borgmatic_passphrase`, `kuma_token_home_local`, and `kuma_token_home_nas` in
+`group_vars/servers/vault.yml`, then encrypt that file:
+
+```sh
+ansible-vault encrypt group_vars/servers/vault.yml
+ansible-playbook --ask-vault-pass site.yml
+```
+
+The role writes borgmatic configuration files with mode `0600`. Vault protects secrets at rest in your
+Ansible repository; root on a managed host can still read the generated configuration and Kuma environment file.
 
 ## Example Playbook
 

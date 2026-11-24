@@ -5,6 +5,8 @@
     state: directory
     mode: 0700
     owner: root
+- name: Configure Uptime Kuma monitoring
+  import_tasks: borgmatic-kuma.yml
 - name: Add Borgmatic Configurations
   template:
     src: borgmatic_app.yml.j2
