@@ -83,7 +83,8 @@ timer. Install that role separately if wanted.
 
 ## Running Molecule tests
 
-Run these commands from the role repository root. Docker must be available.
+Run these commands from the role repository root. The default scenario requires Docker support for privileged
+containers and private cgroup v2 namespaces.
 
 ```sh
 molecule test
