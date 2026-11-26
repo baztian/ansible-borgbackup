@@ -1,24 +1,92 @@
 ---
-- name: Exercise Kuma notifications
-  import_playbook: ../../tests/kuma.yml
-
-- name: Verify Kuma file permissions
+- name: Verify system Kuma notifications
   hosts: all
+  become: true
+  environment:
+    PATH: /tmp/borgbackup-test-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
   tasks:
-    - name: Check Kuma secret ownership and permissions
+    - name: Check Kuma files
       stat:
-        path: /etc/borgmatic.d/kuma.env
-      become: true
-      register: kuma_env
-    - name: Check Kuma helper ownership and permissions
-      stat:
-        path: /usr/local/sbin/borgmatic-kuma-push
-      become: true
-      register: kuma_helper
-    - name: Kuma files should keep root ownership
+        path: "{{ item }}"
+      loop:
+        - /etc/borgmatic.d/kuma.env
+        - /usr/local/sbin/borgmatic-kuma-push
+      register: kuma_files
+
+    - name: Kuma files should remain private and root-owned
       assert:
         that:
-          - kuma_env.stat.pw_name == 'root'
-          - kuma_env.stat.mode == '0600'
-          - kuma_helper.stat.pw_name == 'root'
-          - kuma_helper.stat.mode == '0750'
+          - kuma_files.results[0].stat.pw_name == 'root'
+          - kuma_files.results[0].stat.mode == '0600'
+          - kuma_files.results[1].stat.pw_name == 'root'
+          - kuma_files.results[1].stat.mode == '0750'
+
+    - name: Create mock curl directory
+      file:
+        path: /tmp/borgbackup-test-bin
+        state: directory
+        mode: '0755'
+
+    - name: Create mock notification log
+      copy:
+        dest: /tmp/borgbackup-kuma-calls.log
+        content: ''
+        mode: '0600'
+
+    - name: Install mock curl
+      copy:
+        dest: /tmp/borgbackup-test-bin/curl
+        mode: '0755'
+        content: |
+          #!/bin/sh
+          printf '%s\n' "$*" >> /tmp/borgbackup-kuma-calls.log
+
+    - name: Initialize and list the system repository
+      command: "{{ item }}"
+      loop:
+        - borgmatic --config /etc/borgmatic.d init --encryption none
+        - borgmatic --config /etc/borgmatic.d rlist
+      changed_when: false
+
+    - name: Read notifications after init and listing
+      slurp:
+        src: /tmp/borgbackup-kuma-calls.log
+      register: early_notifications
+
+    - name: Init and listing should not notify Kuma
+      assert:
+        that:
+          - early_notifications.content | b64decode | length == 0
+
+    - name: Run a system backup
+      command: borgmatic --config /etc/borgmatic.d create
+      changed_when: false
+
+    - name: Remove disposable source to force a backup failure
+      file:
+        path: /srv/test-source
+        state: absent
+
+    - name: Run a failing system backup
+      command: borgmatic --config /etc/borgmatic.d create
+      register: backup_failure
+      changed_when: false
+      failed_when: false
+
+    - name: Restore disposable source
+      file:
+        path: /srv/test-source
+        state: directory
+        mode: '0755'
+
+    - name: Read backup notifications
+      slurp:
+        src: /tmp/borgbackup-kuma-calls.log
+      register: backup_notifications
+
+    - name: Verify system success and failure notifications
+      assert:
+        that:
+          - backup_failure.rc != 0
+          - "(backup_notifications.content | b64decode) is search('status=up.*root-test-token')"
+          - "(backup_notifications.content | b64decode) is search('status=down.*root-test-token')"

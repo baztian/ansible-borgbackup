@@ -26,9 +26,9 @@
       vars:
         borgmatic_configs: {}
         borgmatic_init_repos: false
-    - name: Include the user role  # noqa role-name[path]
+    - name: Include the installed user role
       include_role:
-        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/borgbackup_user"
+        name: "{{ borgbackup_user_test_role | default('baztian.borgbackup_user') }}"
       vars:
         borgbackup_user_name: backup-job
         borgbackup_user_init_encryption: repokey

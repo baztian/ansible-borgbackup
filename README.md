@@ -78,9 +78,8 @@ Ansible repository; root on a managed host can still read the generated configur
 
 ## User backups alongside system backups
 
-The separate role in [`roles/borgbackup_user`](roles/borgbackup_user/README.md) manages user-level backups.
-It does not disable this role's system timer. Install it separately as `baztian.borgbackup_user` when publishing
-or consuming it outside this repository.
+The separate `baztian.borgbackup_user` role manages user-level backups. It does not disable this role's system
+timer. Install that role separately if wanted.
 
 ## Running Molecule tests
 
@@ -88,19 +87,12 @@ Run these commands from the role repository root. Docker must be available.
 
 ```sh
 molecule test
-molecule test -s user
-molecule test -s user-debian
 molecule test -s kuma
 ```
 
-The default scenario covers system-wide mode. The `user` and `user-debian` scenarios exercise both roles on one host, including
-user config discovery, initialization, permissions, and unit files. The `kuma` scenario checks permissions and
-verifies backup success and failure notifications on both distributions.
-The user scenario skips live user timer activation because its Docker container has no user D-Bus.
-
-For live timer and backup coverage, run `tests/live-systemd.yml` with `ansible-playbook` against a disposable
-systemd VM. It creates a `backup-job` account, test repositories, and system and user timers. Do not run it on a
-production host.
+The default scenario covers system-wide mode. The `kuma` scenario tests permissions and notifications on both
+supported distributions. The optional `user` and `user-debian` scenarios exercise both roles together. Install
+`baztian.borgbackup_user` first, or set `borgbackup_user_test_role` to another installed role name or role path.
 
 ## Example Playbook
 

@@ -57,3 +57,17 @@
         - ansible_facts.services['borgmatic.service'].status == 'static'
     changed_when: False
     when: ansible_version.full is version('2.9.8', '>=')
+  - name: Inspect system borgmatic timer
+    systemd:
+      name: borgmatic.timer
+    become: yes
+    register: borgmatic_timer_status
+    changed_when: False
+  - name: System borgmatic timer should be active and enabled
+    assert:
+      that:
+        - borgmatic_timer_status.status.LoadState == 'loaded'
+        - borgmatic_timer_status.status.ActiveState == 'active'
+        - borgmatic_timer_status.status.UnitFileState == 'enabled'
+        - borgmatic_timer_status.status.Unit == 'borgmatic.service'
+    changed_when: False
