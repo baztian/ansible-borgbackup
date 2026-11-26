@@ -13,19 +13,25 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: yaml-lint
         uses: ibiqlik/action-yamllint@v3
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@v6.22.2
+        uses: ansible/ansible-lint@v26.11.1
   test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        distro:
-          - ubuntu2204
-          - debian12
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v2
-      - name: molecule
-        uses: robertdebock/molecule-action@2.6.8
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Ansible and Molecule
+        run: |
+          python -m pip install 'ansible-core==2.21.6' 'molecule==26.11.1' 'molecule-plugins[docker]==26.11.0'
+          ansible-galaxy collection install 'community.docker:5.4.1' 'ansible.posix:2.2.2'
+          ansible --version
+          molecule --version
+      - name: Test system role
+        run: molecule test
+      - name: Test Kuma monitoring
+        run: molecule test -s kuma

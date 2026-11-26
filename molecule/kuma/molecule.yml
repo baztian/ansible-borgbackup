@@ -1,0 +1,22 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: ubuntu-instance
+    image: "docker-ubuntu2404-ansible:latest"
+    command: sleep infinity
+  - name: debian-instance
+    image: "docker-debian13-ansible:latest"
+    command: sleep infinity
+provisioner:
+  name: ansible
+  log: True
+  inventory:
+    group_vars:
+      all:
+        ansible_user: ansible
+        ansible_remote_tmp: /tmp/.ansible/tmp
+verifier:
+  name: ansible

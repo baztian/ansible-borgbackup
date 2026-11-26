@@ -10,11 +10,12 @@ driver:
       ansible_connection: local
 platforms:
   - name: instance
-    image: "docker-${MOLECULE_DISTRO:-ubuntu2004}-ansible:latest"
+    image: "docker-ubuntu2404-ansible:latest"
     # Not sure why empty command. Maybe to make sure systemd is PID 1?
-    command: ""
-    volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    # Mount a private cgroup v2 hierarchy before starting systemd as PID 1.
+    command: >-
+      /bin/sh -c 'mount -t cgroup2 cgroup2 /sys/fs/cgroup && exec /lib/systemd/systemd'
+    cgroupns_mode: private
     privileged: True
 provisioner:
   name: ansible
@@ -23,5 +24,6 @@ provisioner:
     host_vars:
       instance:
         ansible_user: ansible
+        ansible_remote_tmp: /tmp/.ansible/tmp
 verifier:
   name: ansible

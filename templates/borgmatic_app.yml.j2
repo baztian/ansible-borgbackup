@@ -5,7 +5,7 @@
 
 {% if _borgmatic_kuma_repositories | default([]) | length > 0 %}
 {% set kuma_hooks = {
-  'after_actions': (item.value.after_actions | default([], true)) + ['/usr/local/sbin/borgmatic-kuma-push up "{repository}"'],
+  'after_backup': (item.value.after_backup | default([], true)) + ['/usr/local/sbin/borgmatic-kuma-push up "{repository}"'],
   'on_error': (item.value.on_error | default([], true)) + ['/usr/local/sbin/borgmatic-kuma-push down "{repository}"']
 } %}
 {{ item.value | combine(kuma_hooks) | to_nice_yaml(width=1337, explicit_start=True, explicit_end=True)  }}

@@ -1,0 +1,42 @@
+---
+- name: Configure system backup fixtures
+  hosts: all
+  become: true
+  tasks:
+    - name: Install system backup packages
+      apt:
+        name: [borgbackup, borgmatic]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Create backup source and repository directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /srv/test-source
+        - /srv/test-root-repository
+
+    - name: Configure system backup and Kuma
+      include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+        tasks_from: borgmatic-config.yml
+      vars:
+        borgmatic_kuma:
+          url: http://127.0.0.1:3001
+          repositories:
+            ROOT:
+              matcher: /srv/test-root-repository
+              token: root-test-token
+        borgmatic_configs:
+          test-root:
+            source_directories: [/srv/test-source]
+            source_directories_must_exist: true
+            repositories:
+              - path: /srv/test-root-repository
+            keep_daily: 7
+
+    - name: Initialize system repository
+      meta: flush_handlers
