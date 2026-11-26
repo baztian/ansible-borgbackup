@@ -91,8 +91,7 @@ molecule test -s kuma
 ```
 
 The default scenario covers system-wide mode. The `kuma` scenario tests permissions and notifications on both
-supported distributions. The optional `user` and `user-debian` scenarios exercise both roles together. Install
-`baztian.borgbackup_user` first, or set `borgbackup_user_test_role` to another installed role name or role path.
+supported distributions.
 
 ## Example Playbook
 

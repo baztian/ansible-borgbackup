@@ -1,3 +1,0 @@
----
-- name: Converge on Debian
-  import_playbook: ../user/converge.yml

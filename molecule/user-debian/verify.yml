@@ -1,3 +1,0 @@
----
-- name: Verify on Debian
-  import_playbook: ../user/verify.yml
