@@ -1,0 +1,15 @@
+########################################################################
+# File managed by Ansible
+# Your changes will be overwritten.
+########################################################################
+
+{% if _borgbackup_user_kuma_repositories | length > 0 %}
+{% set kuma_env = (_borgbackup_user_config_directory ~ '/kuma.env') | quote %}
+{% set kuma_hooks = {
+  'after_backup': (item.value.after_backup | default([], true)) + ['/usr/local/sbin/borgmatic-user-kuma-push up "{repository}" ' ~ kuma_env],
+  'on_error': (item.value.on_error | default([], true)) + ['/usr/local/sbin/borgmatic-user-kuma-push down "{repository}" ' ~ kuma_env]
+} %}
+{{ item.value | combine(kuma_hooks) | to_nice_yaml(width=1337, explicit_start=True, explicit_end=True) }}
+{% else %}
+{{ item.value | to_nice_yaml(width=1337, explicit_start=True, explicit_end=True) }}
+{% endif %}

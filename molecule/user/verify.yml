@@ -1,0 +1,77 @@
+---
+- name: Verify user mode
+  hosts: all
+  tasks:
+    - name: Check user config permissions
+      stat:
+        path: /home/backup-job/.config/borgmatic.d/backup-user.yml
+      become: true
+      register: user_config
+    - name: User configuration should be private
+      assert:
+        that:
+          - user_config.stat.pw_name == 'backup-job'
+          - user_config.stat.mode == '0600'
+    - name: Check repository discovery as service user
+      command: borgmatic --config /home/backup-job/.config/borgmatic.d --verbosity 1 rlist
+      become: true
+      become_user: backup-job
+      environment:
+        HOME: /home/backup-job
+        XDG_CONFIG_HOME: /home/backup-job/.config
+      register: user_borgmatic_list
+      changed_when: false
+    - name: User borgmatic should discover its repository
+      assert:
+        that:
+          - "user_borgmatic_list.stdout is search('/srv/borgmatic-user-repository: Listing repository')"
+          - "user_borgmatic_list.stdout is not search('/etc/borgmatic.d')"
+    - name: Check repository encryption mode
+      command: borgmatic --config /home/backup-job/.config/borgmatic.d rinfo --json
+      become: true
+      become_user: backup-job
+      environment:
+        HOME: /home/backup-job
+        XDG_CONFIG_HOME: /home/backup-job/.config
+      register: user_repository_info
+      changed_when: false
+    - name: User repository should use explicit repokey encryption
+      assert:
+        that:
+          - "user_repository_info.stdout is search('repokey')"
+    - name: Check service user can read source directory
+      command: /usr/bin/test -r /srv/borgmatic-user-source
+      become: true
+      become_user: backup-job
+      changed_when: false
+    - name: Check service user can traverse source directory
+      command: /usr/bin/test -x /srv/borgmatic-user-source
+      become: true
+      become_user: backup-job
+      changed_when: false
+    - name: Check service user can write repository directory
+      command: /usr/bin/test -w /srv/borgmatic-user-repository
+      become: true
+      become_user: backup-job
+      changed_when: false
+    - name: Read user service unit
+      slurp:
+        src: /home/backup-job/.config/systemd/user/borgmatic.service
+      become: true
+      register: user_service_unit
+    - name: Read user timer unit
+      slurp:
+        src: /home/backup-job/.config/systemd/user/borgmatic.timer
+      become: true
+      register: user_timer_unit
+    - name: User units should explicitly select deployed configs and schedule timer
+      assert:
+        that:
+          - "(user_service_unit.content | b64decode) is search('--config=\"/home/backup-job/.config/borgmatic.d\"')"
+          - "(user_timer_unit.content | b64decode) is search('OnCalendar=daily')"
+          - "(user_timer_unit.content | b64decode) is search('WantedBy=timers.target')"
+    - name: Check system timer is still enabled
+      command: systemctl is-enabled borgmatic.timer  # noqa command-instead-of-module
+      register: system_timer
+      changed_when: false
+      failed_when: system_timer.stdout != 'enabled'

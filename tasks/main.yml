@@ -9,7 +9,7 @@
   import_tasks: borgmatic-install.yml
 - name: Install bogmatic config files
   import_tasks: borgmatic-config.yml
-- name: Install sysctl jobs
+- name: Install system borgmatic timer
   import_tasks: borgmatic-job.yml
 - name: Install suspend script
   import_tasks: suspend-script.yml

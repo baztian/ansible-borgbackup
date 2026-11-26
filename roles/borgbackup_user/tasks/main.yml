@@ -1,0 +1,138 @@
+---
+- name: Configure user borgmatic backup
+  become: true
+  block:
+    - name: Validate user backup settings
+      assert:
+        that:
+          - borgbackup_user_name | length > 0
+          - borgbackup_user_name != 'root'
+          - not (borgbackup_user_init_repos | bool) or borgbackup_user_init_encryption | length > 0
+        fail_msg: A non-root user and an explicit encryption mode when initializing repositories are required.
+
+    - name: Install borgmatic and Ansible privilege escalation dependencies
+      apt:
+        name:
+          - borgbackup
+          - borgmatic
+          - acl
+          - dbus-user-session
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Look up the service account
+      getent:
+        database: passwd
+        key: "{{ borgbackup_user_name }}"
+
+    - name: Resolve service account home
+      set_fact:
+        _borgbackup_user_home: "{{ ansible_facts.getent_passwd[borgbackup_user_name][4] }}"
+
+    - name: Resolve user configuration directory
+      set_fact:
+        _borgbackup_user_config_directory: "{{ borgbackup_user_config_directory if borgbackup_user_config_directory | length > 0 else _borgbackup_user_home + '/.config/borgmatic.d' }}"
+
+    - name: Validate user configuration path
+      assert:
+        that:
+          - _borgbackup_user_home is match('^/')
+          - _borgbackup_user_config_directory is match('^/')
+          - (_borgbackup_user_home | normpath) != '/'
+          - (_borgbackup_user_config_directory | normpath).startswith((_borgbackup_user_home | normpath) + '/')
+        fail_msg: The configuration directory must be an absolute path inside the service user's home.
+
+    - name: Create user configuration and unit directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ borgbackup_user_name }}"
+        mode: '0700'
+      become: true
+      become_user: "{{ borgbackup_user_name }}"
+      loop:
+        - "{{ _borgbackup_user_home }}/.config"
+        - "{{ _borgbackup_user_config_directory }}"
+        - "{{ _borgbackup_user_home }}/.config/systemd"
+        - "{{ _borgbackup_user_home }}/.config/systemd/user"
+
+    - name: Configure Uptime Kuma monitoring
+      import_tasks: kuma.yml
+
+    - name: Install user borgmatic configurations
+      template:
+        src: borgmatic.yml.j2
+        dest: "{{ _borgbackup_user_config_directory }}/{{ item.key }}.yml"
+        owner: "{{ borgbackup_user_name }}"
+        mode: '0600'
+      loop: "{{ borgbackup_user_configs | dict2items }}"
+      no_log: true
+
+    - name: Initialize user repositories before starting the timer
+      command:
+        argv:
+          - borgmatic
+          - --config
+          - "{{ _borgbackup_user_config_directory }}"
+          - init
+          - --encryption
+          - "{{ borgbackup_user_init_encryption }}"
+      become: true
+      become_user: "{{ borgbackup_user_name }}"
+      environment:
+        HOME: "{{ _borgbackup_user_home }}"
+        XDG_CONFIG_HOME: "{{ _borgbackup_user_home }}/.config"
+      changed_when: false
+      when:
+        - borgbackup_user_init_repos | bool
+        - borgbackup_user_configs | length > 0
+
+    - name: Find borgmatic executable
+      command: which borgmatic
+      register: _borgbackup_user_executable
+      changed_when: false
+
+    - name: Install user borgmatic service
+      template:
+        src: borgmatic.service.j2
+        dest: "{{ _borgbackup_user_home }}/.config/systemd/user/borgmatic.service"
+        owner: "{{ borgbackup_user_name }}"
+        mode: '0644'
+
+    - name: Install user borgmatic timer
+      template:
+        src: borgmatic.timer.j2
+        dest: "{{ _borgbackup_user_home }}/.config/systemd/user/borgmatic.timer"
+        owner: "{{ borgbackup_user_name }}"
+        mode: '0644'
+      register: _borgbackup_user_timer_file
+
+    - name: Enable linger for the service account
+      command:
+        argv:
+          - loginctl
+          - enable-linger
+          - "{{ borgbackup_user_name }}"
+        creates: "/var/lib/systemd/linger/{{ borgbackup_user_name }}"
+      when: borgbackup_user_enable_linger | bool
+      tags: molecule-notest
+
+    - name: Enable and start the user timer
+      systemd:
+        name: borgmatic.timer
+        scope: user
+        daemon_reload: true
+        enabled: true
+        state: "{{ 'restarted' if _borgbackup_user_timer_file.changed else 'started' }}"
+      become: true
+      become_user: "{{ borgbackup_user_name }}"
+      environment:
+        HOME: "{{ _borgbackup_user_home }}"
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd[borgbackup_user_name][1] }}"
+        DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ ansible_facts.getent_passwd[borgbackup_user_name][1] }}/bus"
+      register: _borgbackup_user_timer_result
+      retries: 5
+      delay: 2
+      until: _borgbackup_user_timer_result is succeeded
+      tags: molecule-notest

@@ -1,0 +1,24 @@
+---
+- name: Exercise Kuma notifications
+  import_playbook: ../../tests/kuma.yml
+
+- name: Verify Kuma file permissions
+  hosts: all
+  tasks:
+    - name: Check Kuma secret ownership and permissions
+      stat:
+        path: /etc/borgmatic.d/kuma.env
+      become: true
+      register: kuma_env
+    - name: Check Kuma helper ownership and permissions
+      stat:
+        path: /usr/local/sbin/borgmatic-kuma-push
+      become: true
+      register: kuma_helper
+    - name: Kuma files should keep root ownership
+      assert:
+        that:
+          - kuma_env.stat.pw_name == 'root'
+          - kuma_env.stat.mode == '0600'
+          - kuma_helper.stat.pw_name == 'root'
+          - kuma_helper.stat.mode == '0750'

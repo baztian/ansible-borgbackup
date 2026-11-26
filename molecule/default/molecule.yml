@@ -10,7 +10,7 @@ driver:
       ansible_connection: local
 platforms:
   - name: instance
-    image: "docker-${MOLECULE_DISTRO:-ubuntu2004}-ansible:latest"
+    image: "docker-ubuntu2404-ansible:latest"
     # Not sure why empty command. Maybe to make sure systemd is PID 1?
     command: ""
     volumes:

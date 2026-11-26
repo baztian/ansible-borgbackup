@@ -1,0 +1,25 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+  options:
+    managed: False
+    ansible_connection_options:
+      ansible_connection: local
+platforms:
+  - name: instance
+    image: "docker-ubuntu2404-ansible:latest"
+    command: ""
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+    privileged: True
+provisioner:
+  name: ansible
+  log: True
+  inventory:
+    host_vars:
+      instance:
+        ansible_user: ansible
+verifier:
+  name: ansible

@@ -1,0 +1,44 @@
+---
+# Run only against a fresh disposable container or VM.
+- name: Exercise the user role without the system role
+  hosts: all
+  become: true
+  tasks:
+    - name: Create the backup account
+      user:
+        name: backup-only
+        create_home: true
+
+    - name: Create the source directory
+      file:
+        path: /srv/user-only-source
+        state: directory
+        mode: '0755'
+
+    - name: Create the repository directory
+      file:
+        path: /srv/user-only-repository
+        state: directory
+        owner: backup-only
+        mode: '0700'
+
+    - name: Configure the user role  # noqa role-name[path]
+      include_role:
+        name: "{{ playbook_dir }}/../roles/borgbackup_user"
+      vars:
+        borgbackup_user_name: backup-only
+        borgbackup_user_init_encryption: repokey
+        borgbackup_user_configs:
+          test-user:
+            source_directories: [/srv/user-only-source]
+            repositories:
+              - path: /srv/user-only-repository
+            encryption_passphrase: test-passphrase
+
+    - name: List the initialized repository
+      command: borgmatic --config /home/backup-only/.config/borgmatic.d rlist
+      become: true
+      become_user: backup-only
+      environment:
+        HOME: /home/backup-only
+      changed_when: false

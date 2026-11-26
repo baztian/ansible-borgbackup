@@ -1,0 +1,9 @@
+---
+borgbackup_user_name: ""
+borgbackup_user_config_directory: ""
+borgbackup_user_configs: {}
+borgbackup_user_kuma: {}
+borgbackup_user_timer: Weekly
+borgbackup_user_init_repos: true
+borgbackup_user_init_encryption: ""
+borgbackup_user_enable_linger: true

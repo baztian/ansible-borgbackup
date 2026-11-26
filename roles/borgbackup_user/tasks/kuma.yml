@@ -1,0 +1,69 @@
+---
+- name: Collect configured Uptime Kuma repository tokens
+  set_fact:
+    _borgbackup_user_kuma_repositories: >-
+      {{ (borgbackup_user_kuma.repositories | default({}) | dict2items)
+         | selectattr('value.token', 'defined') | selectattr('value.token') | list }}
+  no_log: true
+
+- name: Check borgmatic version for Uptime Kuma hooks
+  command: borgmatic --version
+  register: _borgbackup_user_kuma_version
+  changed_when: false
+  when: _borgbackup_user_kuma_repositories | length > 0
+
+- name: Require supported borgmatic Kuma hook behavior
+  assert:
+    that:
+      - _borgbackup_user_kuma_version.stdout is version('1.8.0', '>=')
+      - _borgbackup_user_kuma_version.stdout is version('2.0.0', '<')
+    fail_msg: Uptime Kuma hooks require borgmatic 1.8 or 1.9; borgmatic 2 changes after-backup hook behavior.
+  when: _borgbackup_user_kuma_repositories | length > 0
+
+- name: Validate Uptime Kuma URL
+  assert:
+    that:
+      - borgbackup_user_kuma.url is defined
+      - borgbackup_user_kuma.url | string | length > 0
+    fail_msg: borgbackup_user_kuma.url is required when repository tokens are configured.
+  when: _borgbackup_user_kuma_repositories | length > 0
+
+- name: Validate Uptime Kuma repository matchers
+  assert:
+    that:
+      - item.key is match('^[A-Z][A-Z0-9_]*$')
+      - item.value.matcher is defined
+      - item.value.matcher | string | length > 0
+    fail_msg: Each configured Kuma token needs a valid uppercase key and non-empty matcher.
+  loop: "{{ _borgbackup_user_kuma_repositories }}"
+  no_log: true
+
+- name: Install curl for Uptime Kuma
+  apt:
+    name: curl
+    state: present
+  when: _borgbackup_user_kuma_repositories | length > 0
+
+- name: Install user Uptime Kuma environment file
+  template:
+    src: kuma.env.j2
+    dest: "{{ _borgbackup_user_config_directory }}/kuma.env"
+    owner: "{{ borgbackup_user_name }}"
+    mode: '0600'
+  no_log: true
+  when: _borgbackup_user_kuma_repositories | length > 0
+
+- name: Install user Uptime Kuma push script
+  copy:
+    src: borgmatic-user-kuma-push
+    dest: /usr/local/sbin/borgmatic-user-kuma-push
+    owner: root
+    group: root
+    mode: '0755'
+  when: _borgbackup_user_kuma_repositories | length > 0
+
+- name: Remove disabled user Uptime Kuma environment file
+  file:
+    path: "{{ _borgbackup_user_config_directory }}/kuma.env"
+    state: absent
+  when: _borgbackup_user_kuma_repositories | length == 0

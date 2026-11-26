@@ -1,0 +1,13 @@
+[Unit]
+Description=borgmatic user backup
+Wants=network-online.target
+After=network-online.target
+Documentation=https://torsion.org/borgmatic/
+
+[Service]
+Type=oneshot
+Restart=no
+LogRateLimitIntervalSec=0
+Environment="HOME={{ _borgbackup_user_home | replace('%', '%%') | replace('\\', '\\\\') | replace('"', '\\"') }}"
+Environment="XDG_CONFIG_HOME={{ (_borgbackup_user_home ~ '/.config') | replace('%', '%%') | replace('\\', '\\\\') | replace('"', '\\"') }}"
+ExecStart="{{ _borgbackup_user_executable.stdout | replace('%', '%%') | replace('\\', '\\\\') | replace('"', '\\"') }}" --config="{{ _borgbackup_user_config_directory | replace('%', '%%') | replace('$', '$$') | replace('\\', '\\\\') | replace('"', '\\"') }}" --verbosity -1 --syslog-verbosity 1

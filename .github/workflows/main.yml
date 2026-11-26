@@ -17,15 +17,71 @@ jobs:
       - name: yaml-lint
         uses: ibiqlik/action-yamllint@v3
       - name: Run ansible-lint
-        uses: ansible/ansible-lint@v6.22.2
+        uses: ansible/ansible-lint@v26.11.1
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        distro:
-          - ubuntu2204
-          - debian12
     steps:
       - uses: actions/checkout@v2
       - name: molecule
         uses: robertdebock/molecule-action@2.6.8
+      - name: molecule user mode
+        uses: robertdebock/molecule-action@2.6.8
+        with:
+          scenario: user
+      - name: molecule Kuma permissions
+        uses: robertdebock/molecule-action@2.6.8
+        with:
+          scenario: kuma
+      - name: molecule user mode on Debian
+        uses: robertdebock/molecule-action@2.6.8
+        with:
+          scenario: user-debian
+
+  functional:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - docker-ubuntu2404-ansible
+          - docker-debian13-ansible
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Ansible
+        run: |
+          pip install 'ansible-core==2.16.3'
+          ansible-galaxy collection install community.docker:3.13.3
+      - name: Test the user role on a fresh container
+        run: |
+          docker run -d --name borgbackup-user-only geerlingguy/${{ matrix.image }}:latest sleep infinity
+          ansible-playbook -i 'borgbackup-user-only,' -e 'ansible_connection=community.docker.docker ansible_user=root' --skip-tags molecule-notest tests/user-only.yml
+      - name: Start disposable test container
+        run: docker run -d --name borgbackup-functional geerlingguy/${{ matrix.image }}:latest sleep infinity
+      - name: Check both roles and idempotence
+        run: |
+          ansible-playbook -i 'borgbackup-functional,' -e 'ansible_connection=community.docker.docker ansible_user=root' --skip-tags molecule-notest tests/functional.yml
+          ansible-playbook -i 'borgbackup-functional,' -e 'ansible_connection=community.docker.docker ansible_user=root' --skip-tags molecule-notest tests/functional.yml | tee /tmp/borgbackup-idempotence.log
+          grep -E 'changed=0[[:space:]]' /tmp/borgbackup-idempotence.log
+      - name: Run a user backup
+        run: ansible-playbook -i 'borgbackup-functional,' -e 'ansible_connection=community.docker.docker ansible_user=root' tests/backup.yml
+      - name: Check Kuma helper isolation
+        run: ansible-playbook -i 'borgbackup-functional,' -e 'ansible_connection=community.docker.docker ansible_user=root' --skip-tags molecule-notest tests/kuma.yml
+      - name: Remove disposable test container
+        if: always()
+        run: |
+          docker rm -f borgbackup-functional || true
+          docker rm -f borgbackup-user-only || true
+
+  live-systemd:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Ansible
+        run: pip install 'ansible-core==2.16.3'
+      - name: Exercise system and user timers on the runner
+        run: ansible-playbook -i 'localhost,' -c local tests/live-systemd.yml

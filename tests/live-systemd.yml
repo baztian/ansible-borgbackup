@@ -1,0 +1,110 @@
+---
+# Run only on a disposable systemd VM; this creates accounts, repositories, and timers.
+- name: Exercise both live systemd timers
+  hosts: all
+  become: true
+  vars:
+    test_user_configs:
+      live-test:
+        source_directories: [/srv/borgbackup-live-source]
+        repositories:
+          - path: /srv/borgbackup-live-repository
+        encryption_passphrase: test-passphrase
+        keep_daily: 7
+  tasks:
+    - name: Create the backup account
+      user:
+        name: backup-job
+        create_home: true
+
+    - name: Create source and repository directories
+      file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner }}"
+        mode: '0755'
+      loop:
+        - {path: /srv/borgbackup-live-source, owner: root}
+        - {path: /srv/borgbackup-live-repository, owner: backup-job}
+
+    - name: Enable the system timer  # noqa role-name[path]
+      include_role:
+        name: "{{ playbook_dir }}/.."
+      vars:
+        borgmatic_configs: {}
+        borgmatic_init_repos: false
+
+    - name: Enable the user timer  # noqa role-name[path]
+      include_role:
+        name: "{{ playbook_dir }}/../roles/borgbackup_user"
+      vars:
+        borgbackup_user_name: backup-job
+        borgbackup_user_init_encryption: repokey
+        borgbackup_user_configs: "{{ test_user_configs }}"
+        borgbackup_user_timer: daily
+
+    - name: Read the active daily timer schedule
+      command: systemctl --user show borgmatic.timer --property=TimersCalendar --value  # noqa command-instead-of-module
+      become: true
+      become_user: backup-job
+      environment: &user_environment
+        HOME: /home/backup-job
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts.getent_passwd['backup-job'][1] }}"
+        DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ ansible_facts.getent_passwd['backup-job'][1] }}/bus"
+      register: daily_schedule
+      changed_when: false
+
+    - name: Change the active user timer schedule  # noqa role-name[path]
+      include_role:
+        name: "{{ playbook_dir }}/../roles/borgbackup_user"
+      vars:
+        borgbackup_user_name: backup-job
+        borgbackup_user_init_encryption: repokey
+        borgbackup_user_configs: "{{ test_user_configs }}"
+        borgbackup_user_timer: hourly
+
+    - name: Read the active hourly timer schedule
+      command: systemctl --user show borgmatic.timer --property=TimersCalendar --value  # noqa command-instead-of-module
+      become: true
+      become_user: backup-job
+      environment: *user_environment
+      register: hourly_schedule
+      changed_when: false
+
+    - name: Verify the timer schedule changed
+      assert:
+        that:
+          - daily_schedule.stdout | length > 0
+          - hourly_schedule.stdout | length > 0
+          - daily_schedule.stdout != hourly_schedule.stdout
+
+    - name: Verify the system timer remains active
+      command: systemctl is-active --quiet borgmatic.timer  # noqa command-instead-of-module
+      changed_when: false
+
+    - name: Verify the user timer is active
+      command: systemctl --user is-active --quiet borgmatic.timer  # noqa command-instead-of-module
+      become: true
+      become_user: backup-job
+      environment: *user_environment
+      changed_when: false
+
+    - name: Run a user backup through systemd
+      command: systemctl --user start borgmatic.service  # noqa command-instead-of-module
+      become: true
+      become_user: backup-job
+      environment: *user_environment
+      changed_when: false
+
+    - name: List the resulting user archive
+      command: borgmatic --config /home/backup-job/.config/borgmatic.d rlist --json
+      become: true
+      become_user: backup-job
+      environment: *user_environment
+      changed_when: false
+      register: user_archives
+
+    - name: Verify a user archive exists
+      assert:
+        that:
+          - (user_archives.stdout | from_json)[0].archives | length > 0

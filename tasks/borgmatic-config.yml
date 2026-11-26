@@ -1,9 +1,9 @@
 ---
-- name: Ensures /etc/borgmatic.d exists
+- name: Ensure borgmatic config directory exists
   file:
     path: /etc/borgmatic.d
     state: directory
-    mode: 0700
+    mode: '0700'
     owner: root
 - name: Configure Uptime Kuma monitoring
   import_tasks: borgmatic-kuma.yml
@@ -11,7 +11,9 @@
   template:
     src: borgmatic_app.yml.j2
     dest: "/etc/borgmatic.d/{{ item.key }}.yml"
-    mode: 0600
+    owner: root
+    mode: '0600'
   with_items: "{{ borgmatic_configs | dict2items }}"
+  no_log: true
   notify:
     - Init Borgmatic repos

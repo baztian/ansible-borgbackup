@@ -17,21 +17,32 @@
     command: borgmatic --version
     register: borgbmatic_version_cmd
     changed_when: False
-  - name: Borgmatic should be at least 1.5.x
+  - name: Borgmatic should be at least 1.8.x
     assert:
       that:
-        - borgbmatic_version_cmd.stdout is version('1.5.0', '>=')
+        - borgbmatic_version_cmd.stdout is version('1.8.0', '>=')
     changed_when: False
   - name: Register borgmatic list
-    command: borgmatic list
+    command: borgmatic --verbosity 1 rlist
     register: borgmatic_list_cmd
     become: yes
     changed_when: False
   - name: Borgmatic list should contain both repos
     assert:
       that:
-        - "borgmatic_list_cmd.stdout is search('/srv/backup_etc: Listing archives')"
-        - "borgmatic_list_cmd.stdout is search('/srv/backup_home: Listing archives')"
+        - "borgmatic_list_cmd.stdout is search('/srv/backup_etc: Listing repository')"
+        - "borgmatic_list_cmd.stdout is search('/srv/backup_home: Listing repository')"
+    changed_when: False
+  - name: Check legacy config ownership and permissions
+    stat:
+      path: /etc/borgmatic.d/backup-etc.yml
+    register: legacy_config
+    become: yes
+  - name: Legacy config should remain root-only
+    assert:
+      that:
+        - legacy_config.stat.pw_name == 'root'
+        - legacy_config.stat.mode == '0600'
     changed_when: False
   - name: Populate service facts
     service_facts:

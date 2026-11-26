@@ -1,0 +1,43 @@
+---
+- name: Converge user mode
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create borgmatic service user
+      user:
+        name: backup-job
+        create_home: true
+        state: present
+    - name: Create readable source fixture
+      file:
+        path: /srv/borgmatic-user-source
+        state: directory
+        owner: root
+        mode: '0755'
+    - name: Create writable repository fixture
+      file:
+        path: /srv/borgmatic-user-repository
+        state: directory
+        owner: backup-job
+        mode: '0700'
+    - name: Include the system role
+      include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}"
+      vars:
+        borgmatic_configs: {}
+        borgmatic_init_repos: false
+    - name: Include the user role  # noqa role-name[path]
+      include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/borgbackup_user"
+      vars:
+        borgbackup_user_name: backup-job
+        borgbackup_user_init_encryption: repokey
+        borgbackup_user_timer: daily
+        borgbackup_user_configs:
+          backup-user:
+            source_directories:
+              - /srv/borgmatic-user-source
+            repositories:
+              - path: /srv/borgmatic-user-repository
+            encryption_passphrase: molecule-test-passphrase
+            keep_daily: 7

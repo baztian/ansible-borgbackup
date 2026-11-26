@@ -1,0 +1,166 @@
+---
+# Run after functional.yml on a disposable container or VM.
+- name: Exercise root and user Kuma hooks
+  hosts: all
+  become: true
+  environment:
+    PATH: /tmp/borgbackup-test-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  tasks:
+    - name: Create mock curl directory
+      file:
+        path: /tmp/borgbackup-test-bin
+        state: directory
+        mode: '0755'
+
+    - name: Create mock notification log
+      copy:
+        dest: /tmp/borgbackup-kuma-calls.log
+        content: ''
+        mode: '0666'
+
+    - name: Install mock curl
+      copy:
+        dest: /tmp/borgbackup-test-bin/curl
+        mode: '0755'
+        content: |
+          #!/bin/sh
+          printf '%s\n' "$*" >> /tmp/borgbackup-kuma-calls.log
+
+    - name: Configure root Kuma and hooks  # noqa role-name[path]
+      include_role:
+        name: "{{ playbook_dir }}/.."
+        tasks_from: borgmatic-config.yml
+      vars:
+        borgmatic_kuma:
+          url: http://127.0.0.1:3001
+          repositories:
+            ROOT:
+              matcher: /srv/test-root-repository
+              token: root-test-token
+        borgmatic_configs:
+          test-root:
+            source_directories: [/srv/test-source]
+            source_directories_must_exist: true
+            repositories:
+              - path: /srv/test-root-repository
+            keep_daily: 7
+
+    - name: Initialize system repositories with Kuma configured
+      meta: flush_handlers
+
+    - name: Configure user Kuma and hooks  # noqa role-name[path]
+      include_role:
+        name: "{{ playbook_dir }}/../roles/borgbackup_user"
+      vars:
+        borgbackup_user_name: backup-job
+        borgbackup_user_init_encryption: repokey
+        borgbackup_user_kuma:
+          url: http://127.0.0.1:3001
+          repositories:
+            USER:
+              matcher: /srv/test-user-repository
+              token: user-test-token
+        borgbackup_user_configs:
+          test-user:
+            source_directories: [/srv/test-source]
+            source_directories_must_exist: true
+            repositories:
+              - path: /srv/test-user-repository
+            encryption_passphrase: test-passphrase
+            keep_daily: 7
+
+    - name: Inspect Kuma files
+      stat:
+        path: "{{ item }}"
+      loop:
+        - /usr/local/sbin/borgmatic-kuma-push
+        - /usr/local/sbin/borgmatic-user-kuma-push
+        - /etc/borgmatic.d/kuma.env
+        - /home/backup-job/.config/borgmatic.d/kuma.env
+      register: kuma_files
+
+    - name: Verify Kuma isolation and permissions
+      assert:
+        that:
+          - kuma_files.results[0].stat.mode == '0750'
+          - kuma_files.results[1].stat.mode == '0755'
+          - kuma_files.results[2].stat.mode == '0600'
+          - kuma_files.results[2].stat.pw_name == 'root'
+          - kuma_files.results[3].stat.mode == '0600'
+          - kuma_files.results[3].stat.pw_name == 'backup-job'
+
+    - name: List system repository
+      command: borgmatic --config /etc/borgmatic.d rlist
+      changed_when: false
+
+    - name: List user repository
+      command: borgmatic --config /home/backup-job/.config/borgmatic.d rlist
+      become: true
+      become_user: backup-job
+      environment:
+        HOME: /home/backup-job
+      changed_when: false
+
+    - name: Read notifications after init and listing
+      slurp:
+        src: /tmp/borgbackup-kuma-calls.log
+      register: early_notifications
+
+    - name: Verify init and listing did not notify Kuma
+      assert:
+        that:
+          - early_notifications.content | b64decode | length == 0
+
+    - name: Run a system backup
+      command: borgmatic --config /etc/borgmatic.d create
+      changed_when: false
+
+    - name: Run a user backup
+      command: borgmatic --config /home/backup-job/.config/borgmatic.d create
+      become: true
+      become_user: backup-job
+      environment:
+        HOME: /home/backup-job
+      changed_when: false
+
+    - name: Remove the disposable source to force backup failures
+      file:
+        path: /srv/test-source
+        state: absent
+
+    - name: Run a failing system backup
+      command: borgmatic --config /etc/borgmatic.d create
+      register: root_failure
+      changed_when: false
+      failed_when: false
+
+    - name: Run a failing user backup
+      command: borgmatic --config /home/backup-job/.config/borgmatic.d create
+      become: true
+      become_user: backup-job
+      environment:
+        HOME: /home/backup-job
+      register: user_failure
+      changed_when: false
+      failed_when: false
+
+    - name: Restore the disposable source directory
+      file:
+        path: /srv/test-source
+        state: directory
+        mode: '0755'
+
+    - name: Read backup notifications
+      slurp:
+        src: /tmp/borgbackup-kuma-calls.log
+      register: backup_notifications
+
+    - name: Verify success and failure notifications for both repositories
+      assert:
+        that:
+          - root_failure.rc != 0
+          - user_failure.rc != 0
+          - "(backup_notifications.content | b64decode) is search('status=up.*root-test-token')"
+          - "(backup_notifications.content | b64decode) is search('status=up.*user-test-token')"
+          - "(backup_notifications.content | b64decode) is search('status=down.*root-test-token')"
+          - "(backup_notifications.content | b64decode) is search('status=down.*user-test-token')"

@@ -31,6 +31,7 @@ will fail.
   complete list of available configuration.
 * `borgmatic_kuma`: Optional Uptime Kuma settings. When at least one repository token is non-empty, the role
   installs a protected environment file and adds success and error hooks to each borgmatic configuration.
+  Kuma hooks require borgmatic 1.8 or 1.9; borgmatic 2 changes after-backup hook behavior and is not supported.
   Repository keys must use uppercase letters, digits, and underscores. Matchers support Bash glob patterns.
   Store tokens with Ansible Vault.
 
@@ -50,6 +51,8 @@ borgmatic_kuma:
 
 The role writes `/etc/borgmatic.d/kuma.env` with mode `0600` and installs
 `/usr/local/sbin/borgmatic-kuma-push` with mode `0750`. Empty or omitted tokens disable their matchers.
+Successful `create` actions notify Kuma, whether scheduled or manual; initialization and listing do not. The
+`on_error` hook also reports prune, compact, and check failures, including failures after a successful backup.
 
 ## Protecting secrets with Ansible Vault
 
@@ -59,8 +62,7 @@ the passphrase from `borgmatic_configs`:
 ```yaml
 borgmatic_configs:
   backup-home:
-    storage:
-      encryption_passphrase: "{{ vault_borgmatic_passphrase }}"
+    encryption_passphrase: "{{ vault_borgmatic_passphrase }}"
 ```
 
 For example, define `vault_borgmatic_passphrase`, `kuma_token_home_local`, and `kuma_token_home_nas` in
@@ -73,6 +75,32 @@ ansible-playbook --ask-vault-pass site.yml
 
 The role writes borgmatic configuration files with mode `0600`. Vault protects secrets at rest in your
 Ansible repository; root on a managed host can still read the generated configuration and Kuma environment file.
+
+## User backups alongside system backups
+
+The separate role in [`roles/borgbackup_user`](roles/borgbackup_user/README.md) manages user-level backups.
+It does not disable this role's system timer. Install it separately as `baztian.borgbackup_user` when publishing
+or consuming it outside this repository.
+
+## Running Molecule tests
+
+Run these commands from the role repository root. Docker must be available.
+
+```sh
+molecule test
+molecule test -s user
+molecule test -s user-debian
+molecule test -s kuma
+```
+
+The default scenario covers system-wide mode. The `user` and `user-debian` scenarios exercise both roles on one host, including
+user config discovery, initialization, permissions, and unit files. The `kuma` scenario checks permissions and
+verifies backup success and failure notifications on both distributions.
+The user scenario skips live user timer activation because its Docker container has no user D-Bus.
+
+For live timer and backup coverage, run `tests/live-systemd.yml` with `ansible-playbook` against a disposable
+systemd VM. It creates a `backup-job` account, test repositories, and system and user timers. Do not run it on a
+production host.
 
 ## Example Playbook
 

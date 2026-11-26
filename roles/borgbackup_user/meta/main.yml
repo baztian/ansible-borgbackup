@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: baztian
+  namespace: baztian
+  role_name: borgbackup_user
+  description: User-level borgmatic configuration and systemd timer
+  license: MIT
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+    - name: Debian
+      versions:
+        - trixie
+dependencies: []

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run borgmatic user backup
+
+[Timer]
+OnCalendar={{ borgbackup_user_timer }}
+Persistent=true
+RandomizedDelaySec=2h
+
+[Install]
+WantedBy=timers.target

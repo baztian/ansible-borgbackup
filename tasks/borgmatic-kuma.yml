@@ -11,6 +11,20 @@
   changed_when: false
   no_log: true
 
+- name: Check borgmatic version for Uptime Kuma hooks
+  command: borgmatic --version
+  register: _borgmatic_kuma_version
+  changed_when: false
+  when: _borgmatic_kuma_repositories | length > 0
+
+- name: Require supported borgmatic Kuma hook behavior
+  assert:
+    that:
+      - _borgmatic_kuma_version.stdout is version('1.8.0', '>=')
+      - _borgmatic_kuma_version.stdout is version('2.0.0', '<')
+    fail_msg: Uptime Kuma hooks require borgmatic 1.8 or 1.9; borgmatic 2 changes after-backup hook behavior.
+  when: _borgmatic_kuma_repositories | length > 0
+
 - name: Validate Uptime Kuma URL
   assert:
     that:
@@ -27,6 +41,7 @@
       - item.value.matcher | string | length > 0
     fail_msg: "Each configured Kuma token needs a valid uppercase key and non-empty matcher."
   loop: "{{ _borgmatic_kuma_repositories }}"
+  no_log: true
   when: _borgmatic_kuma_repositories | length > 0
 
 - name: Install Uptime Kuma environment file
@@ -37,6 +52,12 @@
     group: root
     mode: '0600'
   no_log: true
+  when: _borgmatic_kuma_repositories | length > 0
+
+- name: Install curl for Uptime Kuma
+  apt:
+    name: curl
+    state: present
   when: _borgmatic_kuma_repositories | length > 0
 
 - name: Install Uptime Kuma push script
