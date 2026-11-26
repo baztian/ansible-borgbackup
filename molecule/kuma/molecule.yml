@@ -3,12 +3,8 @@ dependency:
   name: galaxy
 driver:
   name: docker
-  options:
-    managed: False
-    ansible_connection_options:
-      ansible_connection: local
 platforms:
-  - name: root-instance
+  - name: ubuntu-instance
     image: "docker-ubuntu2404-ansible:latest"
     command: sleep infinity
   - name: debian-instance
@@ -18,10 +14,9 @@ provisioner:
   name: ansible
   log: True
   inventory:
-    host_vars:
-      root-instance:
+    group_vars:
+      all:
         ansible_user: ansible
-      debian-instance:
-        ansible_user: ansible
+        ansible_remote_tmp: /tmp/.ansible/tmp
 verifier:
   name: ansible
